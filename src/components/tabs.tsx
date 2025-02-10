@@ -12,11 +12,18 @@ interface TabsProps {
     label: string;
     icon?: React.ElementType;
   }[];
+  onChange: (value: string) => void;
+  defaultValue?: string;
+  value?: string;
 }
 
-function Tabs({ children, tabs, className }: TabsProps) {
+function Tabs({ children, tabs, className, onChange, defaultValue, value }: TabsProps) {
   return (
-    <TabsPrimitive defaultValue={tabs[0].value}>
+    <TabsPrimitive
+      value={value}
+      defaultValue={defaultValue || (!value ? tabs[0].value : undefined)}
+      onValueChange={onChange}
+    >
       <ScrollArea>
         <TabsList className={cn('mb-3', className)}>
           {tabs.map((tab) => {
