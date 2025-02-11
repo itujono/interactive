@@ -1,25 +1,20 @@
 {
-  "name": "backend",
+  "name": "interactv-backend",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun run src/index.ts",
     "build": "bun build ./src/index.ts --outdir ./dist",
-    "lint": "eslint src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts",
-    "format": "prettier --write src/**/*.ts"
+    "lint": "bun lint src/**/*.ts",
+    "format:check": "bun fmt --check src/**/*.ts",
+    "format": "bun fmt src/**/*.ts"
   },
   "dependencies": {
     "hono": "^4.7.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "bun-types": "latest",
-    "typescript": "5.5.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.0.0",
-    "prettier": "^3.0.0"
+    "bun-types": "latest"
   }
-} 
+}
