@@ -25,7 +25,7 @@ export default function DisplayPage() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3002');
+    const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
 
     ws.onopen = () => {
       console.log('Display WebSocket Connected');

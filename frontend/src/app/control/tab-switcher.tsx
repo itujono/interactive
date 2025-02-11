@@ -18,7 +18,7 @@ export default function TabSwitcher() {
 
   useEffect(() => {
     // Create WebSocket connection
-    const websocket = new WebSocket('ws://localhost:3002');
+    const websocket = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
 
     websocket.onopen = () => {
       console.log('WebSocket Connected');
@@ -96,7 +96,7 @@ export default function TabSwitcher() {
     <Tabs
       value={scene}
       onChange={handleSceneChange}
-      className="self-center flex"
+      className="flex self-center"
       tabs={[
         { label: 'Space', value: 'space', icon: SparklesIcon },
         { label: 'Flow Field', value: 'flow-field', icon: TvIcon },
