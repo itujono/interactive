@@ -9,9 +9,7 @@ A real-time interactive scene controller built with Next.js and Bun, featuring W
 - **Next.js 14** - React framework with App Router
 - **TypeScript** - Type safety and better developer experience
 - **Tailwind CSS** - Utility-first CSS framework
-- **Shadcn UI** - Reusable UI components
-- **Lucide Icons** - Beautiful and consistent icons
-- **Sonner** - Toast notifications
+- **p5.js** - Creative coding library for interactive scenes
 
 ### Backend
 
@@ -36,12 +34,49 @@ A real-time interactive scene controller built with Next.js and Bun, featuring W
     │   │   └── display/     # Display interface
     │   ├── components/      # Reusable React components
     │   │   ├── ui/          # Shadcn UI components
-    │   │   └── scenes/      # Scene components
+    │   │   └── select-with-flag.tsx  # Country selector
+    │   ├── scenes/          # Interactive scenes
+    │   │   ├── space/       # Space scene with planets
+    │   │   ├── flow-field/  # Flow field particles
+    │   │   └── garden/      # Interactive garden
     │   └── types/          # Shared type definitions
     └── package.json
 ```
 
 ## Features
+
+### Interactive Scenes
+
+#### Space Scene
+
+- Dynamic star field with parallax effect
+- Procedurally generated planets with rings
+- Camera panning and user interaction
+- Real-time user details particles
+
+#### Flow Field Scene
+
+- Dynamic vector field visualization
+- Interactive particle system
+- Mouse force field interaction
+- User details integration
+
+#### Garden Scene
+
+- Interactive plant growth system
+- Dynamic wind effects
+- Cloud system with parallax
+- Particle effects (petals, leaves)
+- User details integration
+
+### Scene Architecture
+
+Each scene follows a modular system-based architecture:
+
+- Separate systems for different functionalities (particles, user details, etc.)
+- Centralized constants and type definitions
+- Consistent resize handling
+- WebSocket integration for real-time updates
 
 ### Real-time Scene Control
 
@@ -60,9 +95,9 @@ A real-time interactive scene controller built with Next.js and Bun, featuring W
 ### UI Components
 
 - Responsive tab-based scene switcher
-- Loading states and error handling
+- Loading states with layout shift prevention
 - Smooth transitions between scenes
-- Scrollable tab interface
+- Country selection with flag icons
 
 ## Getting Started
 
@@ -93,38 +128,6 @@ A real-time interactive scene controller built with Next.js and Bun, featuring W
    - Control interface: [http://localhost:3000/control](http://localhost:3000/control)
    - Display interface: [http://localhost:3000/display](http://localhost:3000/display)
 
-## Architecture
-
-### WebSocket Communication Flow
-
-1. Control and Display clients connect to WebSocket server
-2. Clients register their type (control/display)
-3. Server maintains current scene state
-4. Scene changes are broadcasted to all relevant clients
-5. State is persisted on server for new connections
-
-### Scene Management
-
-- Scenes are lazy-loaded using Next.js dynamic imports
-- Each scene is isolated in its own component
-- Scene state is managed through WebSocket messages
-- Controlled tabs ensure sync between all clients
-
-## Development
-
-### Adding New Scenes
-
-1. Create new scene component in `src/components/scenes`
-2. Add scene type to `src/types/scenes.ts`
-3. Update `TabSwitcher` component with new scene option
-4. Add lazy-loaded import in display page
-
-### WebSocket Message Types
-
-- `SCENE_CHANGE`: Broadcast scene changes
-- `SCENE_STATUS`: Request/respond with current scene
-- `CONTROL_INPUT`: Send control inputs to displays
-
 ## Environment Setup
 
 ### Backend
@@ -137,7 +140,8 @@ WS_PORT=3002          # WebSocket server port
 ### Frontend
 
 ```env
-NEXT_PUBLIC_WS_URL=ws://localhost:3002  # WebSocket server URL
+NEXT_PUBLIC_WS_BACKEND_URL=ws://localhost:3002  # WebSocket server URL
+NEXT_PUBLIC_DISPLAY_URL=http://localhost:3000/display  # Display page URL
 ```
 
 ## Contributing
