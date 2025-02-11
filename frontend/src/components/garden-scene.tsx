@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import p5 from 'p5';
+import { countries } from './select-with-flag';
 
 interface Plant {
   x: number;
@@ -54,15 +55,22 @@ interface Particle {
   type: 'petal' | 'leaf' | 'light';
 }
 
+interface UserDetailsParticle extends Particle {
+  name: string;
+  country: string;
+  flag: string;
+}
+
 export function GardenScene() {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     const sketch = (p: p5) => {
       const plants: Plant[] = [];
-      const particles: Particle[] = [];
+      const particles: (Particle | UserDetailsParticle)[] = [];
       const NUM_PARTICLES = 50;
       let time = 0;
       let windForce = 0;
@@ -213,7 +221,27 @@ export function GardenScene() {
         };
       };
 
-      const updateParticle = (particle: Particle) => {
+      const createUserDetailsParticle = (name: string, country: string) => {
+        const pos = p.createVector(p.random(p.width), -50); // Start from top
+        // Find the flag from our predefined countries
+        const flag = countries.flatMap((group) => group.items).find((item) => item.value === country)?.flag || '🌍'; // Default to world emoji if country not found
+
+        return {
+          pos,
+          vel: p.createVector(p.random(-0.3, 0.3), p.random(0.5, 1)),
+          size: 60,
+          color: p.color(p.random(180, 240), 70, 90), // Blue-ish colors
+          alpha: 200,
+          rotationSpeed: p.random(-0.01, 0.01),
+          rotation: p.random(p.TWO_PI),
+          type: 'light' as const,
+          name,
+          country,
+          flag,
+        };
+      };
+
+      const updateParticle = (particle: Particle | UserDetailsParticle) => {
         particle.pos.add(particle.vel);
         particle.rotation += particle.rotationSpeed;
 
@@ -229,11 +257,29 @@ export function GardenScene() {
         // Apply drag to stabilize movement
         particle.vel.mult(0.99);
 
-        // Wrap around edges
-        if (particle.pos.x > p.width) particle.pos.x = 0;
-        if (particle.pos.x < 0) particle.pos.x = p.width;
-        if (particle.pos.y > p.height) particle.pos.y = 0;
-        if (particle.pos.y < 0) particle.pos.y = p.height;
+        // Wrap around edges with different behavior for user details
+        if ('name' in particle) {
+          // Reset to top when reaching bottom for user details
+          if (particle.pos.y > p.height + 50) {
+            particle.pos.y = -50;
+            particle.pos.x = p.random(p.width);
+          }
+          // Bounce off sides
+          if (particle.pos.x > p.width) {
+            particle.pos.x = p.width;
+            particle.vel.x *= -1;
+          }
+          if (particle.pos.x < 0) {
+            particle.pos.x = 0;
+            particle.vel.x *= -1;
+          }
+        } else {
+          // Original wrapping behavior for normal particles
+          if (particle.pos.x > p.width) particle.pos.x = 0;
+          if (particle.pos.x < 0) particle.pos.x = p.width;
+          if (particle.pos.y > p.height) particle.pos.y = 0;
+          if (particle.pos.y < 0) particle.pos.y = p.height;
+        }
       };
 
       const growPlant = (plant: Plant) => {
@@ -364,11 +410,47 @@ export function GardenScene() {
         canvas.parent(canvasRef.current!);
         p.colorMode(p.HSB);
         p.background(0, 0, 100);
+        p.textAlign(p.CENTER, p.CENTER);
 
         // Initialize particles
         for (let i = 0; i < NUM_PARTICLES; i++) {
           particles.push(createParticle());
         }
+
+        // Setup WebSocket connection
+        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log('Display WebSocket Connected');
+          const registerMessage = {
+            type: 'SCENE_STATUS',
+            clientType: 'display',
+            status: 'ready',
+          };
+          ws.send(JSON.stringify(registerMessage));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            if (message.type === 'CONTROL_INPUT' && message.payload?.userDetails) {
+              const { name, country } = message.payload.userDetails;
+              // Add new user details particle
+              particles.push(createUserDetailsParticle(name, country));
+              // Remove oldest user details particle if there are too many
+              const userDetailsCount = particles.filter((p) => 'name' in p).length;
+              if (userDetailsCount > 5) {
+                const index = particles.findIndex((p) => 'name' in p);
+                if (index !== -1) {
+                  particles.splice(index, 1);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
 
         // Mouse handlers
         canvas.mousePressed(() => {
@@ -428,7 +510,6 @@ export function GardenScene() {
       };
 
       p.draw = () => {
-        // Plain white background, no alpha to prevent gradient buildup
         p.background(0, 0, 100);
         time += 0.02;
 
@@ -458,9 +539,9 @@ export function GardenScene() {
           p.rotate(particle.rotation);
           p.noStroke();
 
-          if (particle.type === 'light') {
-            // Draw light particle with glow effect
-            const glowSize = particle.size * 2;
+          if ('name' in particle) {
+            // Draw user details with a glowing effect
+            const glowSize = particle.size * 1.5;
             p.fill(
               p.hue(particle.color),
               p.saturation(particle.color),
@@ -468,19 +549,51 @@ export function GardenScene() {
               particle.alpha * 0.3
             );
             p.ellipse(0, 0, glowSize, glowSize);
-          }
 
-          p.fill(p.hue(particle.color), p.saturation(particle.color), p.brightness(particle.color), particle.alpha);
-          if (particle.type === 'petal') {
-            p.ellipse(0, 0, particle.size, particle.size * 0.5);
-          } else if (particle.type === 'leaf') {
-            drawLeaf(
-              { pos: p.createVector(0, 0), size: particle.size, angle: particle.rotation, baseAngle: 0, swayOffset: 0 },
-              particle.color,
-              0
-            );
-          } else {
+            // Draw the main circle
+            p.fill(p.hue(particle.color), p.saturation(particle.color), p.brightness(particle.color), particle.alpha);
             p.ellipse(0, 0, particle.size, particle.size);
+
+            // Draw text
+            p.fill(255);
+            p.noStroke();
+            p.textSize(14);
+            p.text(particle.name, 0, -8);
+            // Combine flag and country on same line
+            p.textSize(10);
+            const combinedText = `${particle.flag} ${particle.country}`;
+            p.text(combinedText, 0, 8);
+          } else {
+            // Original particle drawing code
+            if (particle.type === 'light') {
+              const glowSize = particle.size * 2;
+              p.fill(
+                p.hue(particle.color),
+                p.saturation(particle.color),
+                p.brightness(particle.color),
+                particle.alpha * 0.3
+              );
+              p.ellipse(0, 0, glowSize, glowSize);
+            }
+
+            p.fill(p.hue(particle.color), p.saturation(particle.color), p.brightness(particle.color), particle.alpha);
+            if (particle.type === 'petal') {
+              p.ellipse(0, 0, particle.size, particle.size * 0.5);
+            } else if (particle.type === 'leaf') {
+              drawLeaf(
+                {
+                  pos: p.createVector(0, 0),
+                  size: particle.size,
+                  angle: particle.rotation,
+                  baseAngle: 0,
+                  swayOffset: 0,
+                },
+                particle.color,
+                0
+              );
+            } else {
+              p.ellipse(0, 0, particle.size, particle.size);
+            }
           }
           p.pop();
         });
@@ -515,6 +628,9 @@ export function GardenScene() {
     new p5(sketch);
 
     return () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
       if (canvasRef.current?.childNodes[0]) {
         canvasRef.current.childNodes[0].remove();
       }

@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Check, ChevronDown } from 'lucide-react';
 import { Fragment, useId, useState } from 'react';
 
-const countries = [
+export const countries = [
   {
     continent: 'America',
     items: [
@@ -72,7 +72,7 @@ export default function SelectWithFlagSearch({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between bg-background px-3 font-normal outline-offset-0 hover:bg-background focus-visible:border-ring focus-visible:outline-[3px] focus-visible:outline-ring/20"
+            className="bg-background hover:bg-background focus-visible:border-ring focus-visible:outline-ring/20 w-full justify-between px-3 font-normal outline-offset-0 focus-visible:outline-[3px]"
           >
             {value ? (
               <span className="flex min-w-0 items-center gap-2">
@@ -84,10 +84,10 @@ export default function SelectWithFlagSearch({
             ) : (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
-            <ChevronDown size={16} strokeWidth={2} className="shrink-0 text-muted-foreground/80" aria-hidden="true" />
+            <ChevronDown size={16} strokeWidth={2} className="text-muted-foreground/80 shrink-0" aria-hidden="true" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full min-w-[var(--radix-popper-anchor-width)] border-input p-0" align="start">
+        <PopoverContent className="border-input w-full min-w-[var(--radix-popper-anchor-width)] p-0" align="start">
           <Command value={value} onValueChange={onChange} defaultValue={defaultValue}>
             <CommandInput placeholder={placeholder} name={name} />
             <CommandList>

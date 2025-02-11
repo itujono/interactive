@@ -4,7 +4,13 @@ export type SceneMap = {
   [key in SceneKey]: SceneLabel;
 };
 
+export interface UserDetails {
+  name: string;
+  country: string;
+}
+
 export interface ScenePayload {
+  userDetails?: UserDetails;
   displays?: number;
   controls?: number;
   // Add other specific payload types as needed

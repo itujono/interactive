@@ -5,13 +5,65 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './input';
 import SelectWithFlag from './select-with-flag';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export function UserDetailsForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [values, setValues] = useState({ name: '', country: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    // Create WebSocket connection
+    const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('Control WebSocket Connected');
+      // Register as control client
+      const registerMessage = {
+        type: 'SCENE_STATUS',
+        clientType: 'control',
+        status: 'ready',
+      };
+      ws.send(JSON.stringify(registerMessage));
+    };
+
+    return () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValues({ ...values, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!values.name || !values.country) return;
+
+    setIsSubmitting(true);
+
+    // Send user details via WebSocket
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const message = {
+        type: 'CONTROL_INPUT',
+        payload: {
+          userDetails: values,
+        },
+      };
+      wsRef.current.send(JSON.stringify(message));
+
+      // Reset form
+      setValues({ name: '', country: '' });
+      toast.success('User details sent successfully!');
+    } else {
+      toast.error('Connection error. Please try again.');
+    }
+
+    setIsSubmitting(false);
   };
 
   return (
@@ -22,9 +74,10 @@ export function UserDetailsForm({ className, ...props }: React.ComponentPropsWit
           <CardDescription>Fill in your details to continue</CardDescription>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={handleSubmit}>
             <section className="grid gap-6">
               <Input
+                autoFocus
                 required
                 label="Your name"
                 placeholder="Gunawan Sudarsono"
@@ -40,8 +93,8 @@ export function UserDetailsForm({ className, ...props }: React.ComponentPropsWit
                 onChange={(value) => setValues({ ...values, country: value })}
                 defaultValue={values.country}
               />
-              <Button type="submit" className="w-full">
-                Continue
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Sending...' : 'Continue'}
               </Button>
             </section>
           </form>

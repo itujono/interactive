@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import p5 from 'p5';
+import { countries } from './select-with-flag';
 
 interface Star {
   x: number;
@@ -28,8 +29,24 @@ interface Planet {
   ringTilt?: number;
 }
 
+interface UserDetailsParticle {
+  x: number;
+  y: number;
+  name: string;
+  country: string;
+  flag: string;
+  color: p5.Color;
+  alpha: number;
+  rotation: number;
+  rotationSpeed: number;
+  size: number;
+  velocityX: number;
+  velocityY: number;
+}
+
 export function SpaceScene() {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -37,6 +54,7 @@ export function SpaceScene() {
     const sketch = (p: p5) => {
       const stars: Star[] = [];
       const planets: Planet[] = [];
+      const userParticles: UserDetailsParticle[] = [];
       const NUM_STARS = 400;
       const NUM_PLANETS = 5;
 
@@ -228,14 +246,120 @@ export function SpaceScene() {
         p.pop();
       };
 
-      // Setup runs once
+      // Create a user details particle
+      const createUserDetailsParticle = (name: string, country: string) => {
+        // Find the flag from our predefined countries
+        const flag = countries.flatMap((group) => group.items).find((item) => item.value === country)?.flag || '🌍';
+
+        // Randomly decide if particle starts from left or right
+        const startFromLeft = Math.random() > 0.5;
+        const x = startFromLeft ? -100 : p.width + 100;
+        const velocityX = startFromLeft ? p.random(0.5, 1) : p.random(-1, -0.5);
+
+        // Create particle with space-themed colors
+        const hue = p.random(200, 280); // Blue to purple range
+        return {
+          x,
+          y: p.random(p.height * 0.2, p.height * 0.8), // Random height within middle 60% of screen
+          name,
+          country,
+          flag,
+          color: p.color(hue, p.random(70, 90), p.random(80, 100)),
+          alpha: 255,
+          rotation: 0, // No rotation needed
+          rotationSpeed: 0,
+          size: 60,
+          velocityX,
+          velocityY: p.random(-0.05, 0.05), // Slight vertical drift
+        };
+      };
+
+      // Update user details particle
+      const updateUserParticle = (particle: UserDetailsParticle) => {
+        // Update position
+        particle.x += particle.velocityX;
+        particle.y += particle.velocityY;
+
+        // Add slight wave motion to vertical movement
+        particle.y += Math.sin(p.frameCount * 0.02 + particle.x * 0.01) * 0.2;
+
+        // Keep vertical position within bounds
+        if (particle.y < p.height * 0.1) {
+          particle.y = p.height * 0.1;
+          particle.velocityY *= -1;
+        } else if (particle.y > p.height * 0.9) {
+          particle.y = p.height * 0.9;
+          particle.velocityY *= -1;
+        }
+
+        // Reset to opposite side when going off screen
+        if (particle.velocityX > 0 && particle.x > p.width + 100) {
+          particle.x = -100;
+          particle.y = p.random(p.height * 0.2, p.height * 0.8);
+        } else if (particle.velocityX < 0 && particle.x < -100) {
+          particle.x = p.width + 100;
+          particle.y = p.random(p.height * 0.2, p.height * 0.8);
+        }
+      };
+
+      // Draw user details particle
+      const drawUserParticle = (particle: UserDetailsParticle, cameraX: number, cameraY: number) => {
+        const screenX = particle.x - cameraX * 0.3; // Reduced parallax effect
+        const screenY = particle.y - cameraY * 0.3;
+
+        p.push();
+        p.translate(screenX, screenY);
+
+        // Draw main text
+        p.fill(255);
+        p.textSize(14);
+        p.text(particle.name, 0, -8);
+        p.textSize(10);
+        const combinedText = `${particle.flag} ${particle.country}`;
+        p.text(combinedText, 0, 8);
+
+        p.pop();
+      };
+
       p.setup = () => {
         const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
         canvas.parent(canvasRef.current!);
         p.colorMode(p.HSB);
         p.background(0);
+        p.textAlign(p.CENTER, p.CENTER);
         initStars();
         initPlanets();
+
+        // Setup WebSocket connection
+        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log('Display WebSocket Connected');
+          const registerMessage = {
+            type: 'SCENE_STATUS',
+            clientType: 'display',
+            status: 'ready',
+          };
+          ws.send(JSON.stringify(registerMessage));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            if (message.type === 'CONTROL_INPUT' && message.payload?.userDetails) {
+              const { name, country } = message.payload.userDetails;
+              // Add new user details particle
+              userParticles.push(createUserDetailsParticle(name, country));
+              // Remove oldest particle if there are too many
+              if (userParticles.length > 5) {
+                userParticles.shift();
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
 
         // Mouse event handlers
         canvas.mousePressed(() => {
@@ -251,7 +375,6 @@ export function SpaceScene() {
         });
       };
 
-      // Draw loop runs continuously
       p.draw = () => {
         p.background(0);
 
@@ -286,6 +409,12 @@ export function SpaceScene() {
           p.ellipse(wrappedX, wrappedY, currentSize, currentSize);
         });
 
+        // Update and draw user particles
+        userParticles.forEach((particle) => {
+          updateUserParticle(particle);
+          drawUserParticle(particle, cameraX, cameraY);
+        });
+
         // Update and draw planets
         planets.forEach((planet) => {
           planet.rotation += planet.rotationSpeed;
@@ -317,6 +446,9 @@ export function SpaceScene() {
 
     // Cleanup on unmount
     return () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
       if (canvasRef.current?.childNodes[0]) {
         canvasRef.current.childNodes[0].remove();
       }
