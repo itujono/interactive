@@ -63,12 +63,12 @@ export function GardenScene() {
     const sketch = (p: p5) => {
       const plants: Plant[] = [];
       const particles: Particle[] = [];
-      const NUM_PARTICLES = 100;
+      const NUM_PARTICLES = 50;
       let time = 0;
       let windForce = 0;
       let windAngle = 0;
       let targetWindAngle = 0;
-      const MAX_PLANTS = 30;
+      const MAX_PLANTS = 20;
       let mouseHoldStart = 0;
       let lastMousePos = { x: 0, y: 0 };
 
@@ -97,7 +97,7 @@ export function GardenScene() {
         }
       };
 
-      const createFlower = (pos: p5.Vector, plantColor: p5.Color): Flower => {
+      const createFlower = (pos: p5.Vector): Flower => {
         // Vibrant colors for flower petals
         const flowerColors = [
           [320, 340], // Pink
@@ -139,12 +139,16 @@ export function GardenScene() {
         p.fill(flower.color);
         for (let i = 0; i < flower.petalCount; i++) {
           const angle = (i / flower.petalCount) * p.TWO_PI;
-          const petalX = p.cos(angle) * size * 0.5;
-          const petalY = p.sin(angle) * size * 0.5;
+          // Adjust petal positioning to be more natural
+          const petalOffset = size * 0.3; // Distance from center
+          const petalX = p.cos(angle) * petalOffset;
+          const petalY = p.sin(angle) * petalOffset;
+
           p.push();
           p.translate(petalX, petalY);
           p.rotate(angle);
-          p.ellipse(0, 0, size * 0.7, size * 0.3);
+          // Make petals slightly more elongated and natural looking
+          p.ellipse(0, 0, size * 0.8, size * 0.35);
           p.pop();
         }
 
@@ -162,18 +166,21 @@ export function GardenScene() {
         p.noStroke();
         p.fill(p.hue(plantColor), p.saturation(plantColor) * 1.2, p.brightness(plantColor) * 1.1);
 
-        // Draw leaf shape
+        // Simpler, more natural leaf shape
         p.beginShape();
-        for (let i = 0; i <= 10; i++) {
-          const t = i / 10;
+        const leafWidth = leaf.size * 0.4;
+        const points = 12;
+
+        for (let i = 0; i <= points; i++) {
+          const t = i / points;
           const x = leaf.size * t;
-          const y = leaf.size * 0.3 * p.sin(t * p.PI);
+          const y = leafWidth * p.sin(t * p.PI);
           p.vertex(x, y);
         }
-        for (let i = 10; i >= 0; i--) {
-          const t = i / 10;
+        for (let i = points; i >= 0; i--) {
+          const t = i / points;
           const x = leaf.size * t;
-          const y = -leaf.size * 0.3 * p.sin(t * p.PI);
+          const y = -leafWidth * p.sin(t * p.PI);
           p.vertex(x, y);
         }
         p.endShape(p.CLOSE);
@@ -196,11 +203,11 @@ export function GardenScene() {
 
         return {
           pos,
-          vel: p.createVector(p.random(-0.5, 0.5), p.random(-0.5, 0.5)),
-          size: type === 'light' ? p.random(2, 4) : p.random(4, 8),
+          vel: p.createVector(p.random(-0.3, 0.3), p.random(-0.3, 0.3)),
+          size: type === 'light' ? p.random(2, 3) : p.random(3, 6),
           color,
-          alpha: type === 'light' ? p.random(50, 100) : p.random(150, 200),
-          rotationSpeed: p.random(-0.02, 0.02),
+          alpha: type === 'light' ? p.random(40, 80) : p.random(120, 160),
+          rotationSpeed: p.random(-0.01, 0.01),
           rotation: p.random(p.TWO_PI),
           type,
         };
@@ -232,7 +239,9 @@ export function GardenScene() {
       const growPlant = (plant: Plant) => {
         if (plant.growthProgress >= 1) return;
 
-        plant.growthProgress = Math.min(1, plant.growthProgress + plant.growthSpeed);
+        // Increase growth speed
+        const growthMultiplier = plant.type === 'tree' ? 2 : 3;
+        plant.growthProgress = Math.min(1, plant.growthProgress + plant.growthSpeed * growthMultiplier);
         const currentHeight = plant.maxHeight * plant.growthProgress;
 
         // Clear existing segments
@@ -255,7 +264,13 @@ export function GardenScene() {
 
           // Update or create flower
           if (plant.growthProgress > 0.7 && plant.flowers.length === 0) {
-            plant.flowers.push(createFlower(mainStem.end, plant.color));
+            // Calculate the flower position at the end of the stem
+            const flowerPos = p.createVector(
+              mainStem.end.x,
+              // Offset the Y position slightly up to center the flower on the stem
+              mainStem.end.y - 5
+            );
+            plant.flowers.push(createFlower(flowerPos));
           }
           plant.flowers.forEach((flower) => {
             flower.bloomProgress = p.map(plant.growthProgress, 0.7, 1, 0, 1, true);
@@ -308,12 +323,14 @@ export function GardenScene() {
               const branch = createBranch(branchStart, branchAngle, currentHeight * 0.4, 3 * plant.growthProgress);
               plant.segments.push(branch);
 
-              // Add leaves to branches
+              // Simplified leaf positioning
               if (plant.growthProgress > 0.6 && plant.leaves.length < numBranches * 2) {
-                plant.leaves.push(
-                  createLeaf(branch.end, branchAngle + p.QUARTER_PI),
-                  createLeaf(branch.end, branchAngle - p.QUARTER_PI)
-                );
+                // Add leaf at the end of each branch
+                const leafPos = p.createVector(branch.end.x, branch.end.y);
+
+                // Align leaf with branch angle but with slight variation
+                const leafAngle = branchAngle + (i % 2 === 0 ? 0.2 : -0.2);
+                plant.leaves.push(createLeaf(leafPos, leafAngle));
               }
             }
           }
