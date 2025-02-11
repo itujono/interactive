@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import p5 from 'p5';
+import { countries } from './select-with-flag';
 
 interface Particle {
   pos: p5.Vector;
@@ -12,6 +13,12 @@ interface Particle {
   alpha: number;
 }
 
+interface UserDetailsParticle extends Particle {
+  name: string;
+  country: string;
+  flag: string;
+}
+
 interface MouseForce {
   pos: p5.Vector;
   strength: number;
@@ -20,12 +27,13 @@ interface MouseForce {
 
 export function FlowField() {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     const sketch = (p: p5) => {
-      const particles: Particle[] = [];
+      const particles: (Particle | UserDetailsParticle)[] = [];
       const NUM_PARTICLES = 1000;
       let flowField: p5.Vector[][] = [];
       const FIELD_SCALE = 20; // Size of each flow field cell
@@ -116,17 +124,73 @@ export function FlowField() {
         if (particle.pos.y < 0) particle.pos.y = p.height;
       };
 
+      const createUserDetailsParticle = (name: string, country: string): UserDetailsParticle => {
+        // Find the flag from our predefined countries
+        const flag =
+          countries
+            .flatMap((group) => group.items)
+            .find((item: { value: string; flag: string }) => item.value === country)?.flag || '🌍';
+
+        return {
+          pos: p.createVector(p.random(p.width), p.random(p.height)),
+          vel: p.createVector(0, 0),
+          acc: p.createVector(0, 0),
+          maxSpeed: p.random(1, 2), // Slightly slower than regular particles
+          color: p.color(p.random(360), 80, 100, 0.5),
+          alpha: p.random(200, 255),
+          name,
+          country,
+          flag,
+        };
+      };
+
       p.setup = () => {
         const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
         canvas.parent(canvasRef.current!);
         p.colorMode(p.HSB);
         p.background(0);
+        p.textAlign(p.CENTER, p.CENTER);
 
         cols = p.floor(p.width / FIELD_SCALE);
         rows = p.floor(p.height / FIELD_SCALE);
         flowField = new Array(rows);
 
         initParticles();
+
+        // Setup WebSocket connection
+        const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log('Display WebSocket Connected');
+          const registerMessage = {
+            type: 'SCENE_STATUS',
+            clientType: 'display',
+            status: 'ready',
+          };
+          ws.send(JSON.stringify(registerMessage));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            if (message.type === 'CONTROL_INPUT' && message.payload?.userDetails) {
+              const { name, country } = message.payload.userDetails;
+              // Add new user details particle
+              particles.push(createUserDetailsParticle(name, country));
+              // Remove oldest user details particle if there are too many
+              const userDetailsCount = particles.filter((p): p is UserDetailsParticle => 'name' in p).length;
+              if (userDetailsCount > 5) {
+                const index = particles.findIndex((p): p is UserDetailsParticle => 'name' in p);
+                if (index !== -1) {
+                  particles.splice(index, 1);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
 
         // Mouse event handlers
         canvas.mousePressed(() => {
@@ -143,7 +207,15 @@ export function FlowField() {
       };
 
       p.draw = () => {
-        p.background(0, 0.1); // Slight fade for trails
+        // Clear background completely for text
+        p.background(0);
+
+        // Draw semi-transparent background for particle trails only
+        p.push();
+        p.noStroke();
+        p.fill(0, 0.9); // Slightly more opaque to reduce trails
+        p.rect(0, 0, p.width, p.height);
+        p.pop();
 
         // Update mouse force
         if (mouseForce) {
@@ -158,14 +230,37 @@ export function FlowField() {
 
         createFlowField();
 
+        // First draw all regular particles
         particles.forEach((particle) => {
           updateParticle(particle);
 
-          p.stroke(p.hue(particle.color), p.saturation(particle.color), p.brightness(particle.color), particle.alpha);
-          p.strokeWeight(1);
-          const prevX = particle.pos.x - particle.vel.x;
-          const prevY = particle.pos.y - particle.vel.y;
-          p.line(prevX, prevY, particle.pos.x, particle.pos.y);
+          if (!('name' in particle)) {
+            // Draw regular particle
+            p.stroke(p.hue(particle.color), p.saturation(particle.color), p.brightness(particle.color), particle.alpha);
+            p.strokeWeight(1);
+            const prevX = particle.pos.x - particle.vel.x;
+            const prevY = particle.pos.y - particle.vel.y;
+            p.line(prevX, prevY, particle.pos.x, particle.pos.y);
+          }
+        });
+
+        // Then draw all text particles on top
+        particles.forEach((particle) => {
+          if ('name' in particle) {
+            p.push();
+            p.translate(particle.pos.x, particle.pos.y);
+
+            // Draw text
+            p.fill(255);
+            p.noStroke();
+            p.textSize(14);
+            p.text(particle.name, 0, -8);
+            p.textSize(10);
+            const combinedText = `${particle.flag} ${particle.country}`;
+            p.text(combinedText, 0, 8);
+
+            p.pop();
+          }
         });
       };
 
