@@ -1,7 +1,12 @@
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <h1>Hello World</h1>
+    <main className="bg-muted flex min-h-screen items-center justify-center p-24 pt-0">
+      <Button asChild>
+        <Link href="/control">Go to Control</Link>
+      </Button>
     </main>
   );
 }
