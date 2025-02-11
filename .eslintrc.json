@@ -1,12 +1,6 @@
 {
   "extends": "next/core-web-vitals",
   "rules": {
-    // Disable exhaustive-deps warning for specific files
-    "react-hooks/exhaustive-deps": [
-      "warn",
-      {
-        "skipComponents": ["FlowField", "GardenScene", "SpaceScene"]
-      }
-    ]
+    "react-hooks/exhaustive-deps": "warn"
   }
 }
