@@ -58,7 +58,16 @@ export function UserDetailsForm({ className, ...props }: React.ComponentPropsWit
 
       // Reset form
       setValues({ name: '', country: '' });
-      toast.success('User details sent successfully!');
+      // toast.success(`Now open ${process.env.NEXT_PUBLIC_DISPLAY_URL} to see your name floating in the scene`);
+      toast('Your details sent!', {
+        description: `Now open the Display tab to see your name floating in the scene`,
+        action: {
+          label: 'Open Display',
+          onClick: () => {
+            window.open(process.env.NEXT_PUBLIC_DISPLAY_URL, '_blank');
+          },
+        },
+      });
     } else {
       toast.error('Connection error. Please try again.');
     }
@@ -71,7 +80,7 @@ export function UserDetailsForm({ className, ...props }: React.ComponentPropsWit
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Fill in your details to continue</CardDescription>
+          <CardDescription>Fill in your details to see your name floating in the scene</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
