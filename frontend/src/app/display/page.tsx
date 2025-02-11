@@ -5,17 +5,23 @@ import dynamic from 'next/dynamic';
 import type { SceneKey, SceneMessage } from '../../types/scenes';
 
 const GardenScene = dynamic(() => import('../../components/garden-scene').then((mod) => mod.GardenScene), {
-  loading: () => <div className="flex min-h-screen items-center justify-center">Loading Garden Scene...</div>,
+  loading: () => (
+    <div className="text-primary flex min-h-screen items-center justify-center font-bold">Loading Garden Scene...</div>
+  ),
   ssr: false,
 });
 
 const SpaceScene = dynamic(() => import('../../components/space-scene').then((mod) => mod.SpaceScene), {
-  loading: () => <div className="flex min-h-screen items-center justify-center">Loading Space Scene...</div>,
+  loading: () => (
+    <div className="text-primary flex min-h-screen items-center justify-center font-bold">Loading Space Scene...</div>
+  ),
   ssr: false,
 });
 
 const FlowField = dynamic(() => import('../../components/flow-field').then((mod) => mod.FlowField), {
-  loading: () => <div className="flex min-h-screen items-center justify-center">Loading Flow Field...</div>,
+  loading: () => (
+    <div className="text-primary flex min-h-screen items-center justify-center font-bold">Loading Flow Field...</div>
+  ),
   ssr: false,
 });
 
@@ -112,7 +118,7 @@ export default function DisplayPage() {
         return (
           <Suspense
             fallback={
-              <div className="flex min-h-screen items-center justify-center font-bold text-amber-300">
+              <div className="text-primary-foreground flex min-h-screen items-center justify-center font-bold">
                 Loading Garden Scene...
               </div>
             }
@@ -124,7 +130,7 @@ export default function DisplayPage() {
         return (
           <Suspense
             fallback={
-              <div className="flex min-h-screen items-center justify-center font-bold text-amber-300">
+              <div className="text-primary-foreground flex min-h-screen items-center justify-center font-bold">
                 Loading Space Scene...
               </div>
             }
@@ -136,7 +142,7 @@ export default function DisplayPage() {
         return (
           <Suspense
             fallback={
-              <div className="flex min-h-screen items-center justify-center font-bold text-amber-300">
+              <div className="text-primary-foreground flex min-h-screen items-center justify-center font-bold">
                 Loading Flow Field...
               </div>
             }
@@ -152,7 +158,7 @@ export default function DisplayPage() {
   if (status === 'loading' || !currentScene) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <div className="font-bold text-amber-300">Loading scene status...</div>
+        <div className="font-bold">Loading scene status...</div>
         <div className="text-muted-foreground text-sm">
           {isTimeout ? (
             <>
@@ -163,7 +169,7 @@ export default function DisplayPage() {
                   setIsTimeout(false);
                   connectWebSocket();
                 }}
-                className="ml-2 text-amber-300 hover:underline"
+                className="ml-2 hover:underline"
               >
                 Try again
               </button>
@@ -179,7 +185,7 @@ export default function DisplayPage() {
   if (status === 'error') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <div className="font-bold text-amber-300">Connection Error</div>
+        <div className="text-destructive font-bold">Connection Error</div>
         <div className="text-muted-foreground text-sm">
           {isTimeout ? 'Connection timed out.' : 'Failed to connect to the server.'}{' '}
           <button
@@ -188,7 +194,7 @@ export default function DisplayPage() {
               setIsTimeout(false);
               connectWebSocket();
             }}
-            className="text-amber-300 hover:underline"
+            className="text-destructive hover:underline"
           >
             Try again
           </button>
