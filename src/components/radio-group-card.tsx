@@ -1,6 +1,6 @@
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useId } from "react";
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useId } from 'react';
 
 interface RadioGroupCardItem {
   label: string;
@@ -18,7 +18,10 @@ export default function RadioGroupCard({ items, id }: RadioGroupCardProps) {
   return (
     <RadioGroup className="gap-2" defaultValue="1">
       {items.map((item) => (
-        <div className="relative flex w-full items-start gap-2 rounded-lg border border-input p-4 shadow-sm shadow-black/5 has-[[data-state=checked]]:border-ring">
+        <div
+          key={`${id}-${item.value}`}
+          className="relative flex w-full items-start gap-2 rounded-lg border border-input p-4 shadow-sm shadow-black/5 has-[[data-state=checked]]:border-ring"
+        >
           <RadioGroupItem
             value={item.value}
             id={`${id}-${item.value}`}
@@ -28,9 +31,7 @@ export default function RadioGroupCard({ items, id }: RadioGroupCardProps) {
           <div className="grid grow gap-2">
             <Label htmlFor={`${id}-${item.value}`}>
               {item.label}
-            <span className="text-xs font-normal leading-[inherit] text-muted-foreground">
-                {item.sublabel}
-              </span>
+              <span className="text-xs font-normal leading-[inherit] text-muted-foreground">{item.sublabel}</span>
             </Label>
             {item.description && (
               <p id={`${id}-${item.value}-description`} className="text-xs text-muted-foreground">

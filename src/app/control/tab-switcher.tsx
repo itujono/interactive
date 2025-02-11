@@ -37,11 +37,14 @@ export default function TabSwitcher() {
 
         // Handle both scene changes and status updates
         if (message.type === 'SCENE_CHANGE' && message.scene) {
-          setScene(message.scene);
-          // Only show toast for updates, not initial scene
-          if (scene !== null) {
-            toast.info(`Scene synced to ${SCENE_LABELS[message.scene]}`);
-          }
+          const newScene = message.scene;
+          setScene((prevScene) => {
+            // Only show toast for updates, not initial scene
+            if (prevScene !== null) {
+              toast.info(`Scene synced to ${SCENE_LABELS[newScene]}`);
+            }
+            return newScene;
+          });
         }
         // Handle initial scene status
         else if (message.type === 'SCENE_STATUS' && message.scene) {
@@ -58,19 +61,17 @@ export default function TabSwitcher() {
 
     websocket.onclose = (event: CloseEvent) => {
       console.log('WebSocket Disconnected:', event.code, event.reason);
-      // Reset scene state when disconnected
       setScene(null);
     };
 
     setWs(websocket);
 
-    // Cleanup on unmount
     return () => {
       if (websocket.readyState === WebSocket.OPEN) {
         websocket.close();
       }
     };
-  }, []); // Remove scene from dependencies
+  }, []);
 
   const handleSceneChange = (value: string) => {
     const newScene = value as SceneKey;
