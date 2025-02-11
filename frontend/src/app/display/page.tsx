@@ -4,21 +4,21 @@ import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { SceneKey, SceneMessage } from '../../types/scenes';
 
-const GardenScene = dynamic(() => import('../../components/garden-scene').then((mod) => mod.GardenScene), {
+const GardenScene = dynamic(() => import('../../scenes/garden').then((mod) => mod.GardenScene), {
   loading: () => (
     <div className="text-primary flex min-h-screen items-center justify-center font-bold">Loading Garden Scene...</div>
   ),
   ssr: false,
 });
 
-const SpaceScene = dynamic(() => import('../../components/space-scene').then((mod) => mod.SpaceScene), {
+const SpaceScene = dynamic(() => import('../../scenes/space').then((mod) => mod.SpaceScene), {
   loading: () => (
     <div className="text-primary flex min-h-screen items-center justify-center font-bold">Loading Space Scene...</div>
   ),
   ssr: false,
 });
 
-const FlowField = dynamic(() => import('../../components/flow-field').then((mod) => mod.FlowField), {
+const FlowField = dynamic(() => import('../../scenes/flow-field').then((mod) => mod.FlowFieldScene), {
   loading: () => (
     <div className="text-primary flex min-h-screen items-center justify-center font-bold">Loading Flow Field...</div>
   ),
@@ -37,7 +37,7 @@ export default function DisplayPage() {
         setIsTimeout(true);
         setStatus('error');
       }
-    }, 5000); // 5 seconds timeout
+    }, 10000); // 10 seconds timeout
 
     return () => clearTimeout(timeoutId);
   }, [status, currentScene]);
