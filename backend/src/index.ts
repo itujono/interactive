@@ -17,11 +17,16 @@ const clients = new Map<string, Client>();
 // Track current scene
 let currentScene: SceneKey = 'space';
 
-// CORS middleware
+const PORT = process.env.PORT || 3001;
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Update CORS to be environment-aware
 app.use(
   '/*',
   cors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: isDevelopment
+      ? ['http://localhost:3000', 'http://localhost:3001']
+      : ['https://your-frontend-domain.vercel.app'],
     credentials: true,
   })
 );
@@ -85,62 +90,121 @@ function broadcastStatus() {
   broadcastToControls(status);
 }
 
-// Create WebSocket server
-const wsServer = Bun.serve({
-  port: 3002, // Different port for WebSocket server
-  fetch(req) {
-    // Upgrade all requests to WebSocket
-    const success = wsServer.upgrade(req);
-    if (!success) {
-      return new Response('WebSocket upgrade failed', { status: 400 });
-    }
-  },
-  websocket: {
-    message(ws: ServerWebSocket, message: string) {
-      try {
-        const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
-        if (!id) return;
+// In production, we'll use a single server for both HTTP and WebSocket
+if (isDevelopment) {
+  // Development: Separate servers for HTTP and WebSocket
+  const WS_PORT = process.env.WS_PORT || 3002;
 
-        const parsedMessage = JSON.parse(message) as SceneMessage;
+  const wsServer = Bun.serve({
+    port: WS_PORT,
+    fetch(req) {
+      const success = wsServer.upgrade(req);
+      if (!success) {
+        return new Response('WebSocket upgrade failed', { status: 400 });
+      }
+    },
+    websocket: {
+      message(ws: ServerWebSocket, message: string) {
+        try {
+          const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
+          if (!id) return;
 
-        // Handle client type registration
-        if (parsedMessage.clientType) {
-          const client = clients.get(id);
-          if (client) {
-            clients.set(id, { ...client, type: parsedMessage.clientType });
-            broadcastStatus();
-            return;
+          const parsedMessage = JSON.parse(message) as SceneMessage;
+
+          // Handle client type registration
+          if (parsedMessage.clientType) {
+            const client = clients.get(id);
+            if (client) {
+              clients.set(id, { ...client, type: parsedMessage.clientType });
+              broadcastStatus();
+              return;
+            }
           }
+
+          handleMessage(id, parsedMessage);
+        } catch (error) {
+          console.error('Failed to parse message:', error);
         }
+      },
+      open(ws: ServerWebSocket) {
+        const id = crypto.randomUUID();
+        clients.set(id, { id, ws, type: 'display' });
+        console.log(`Client connected: ${id}`);
+      },
+      close(ws: ServerWebSocket) {
+        const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
+        if (id) {
+          clients.delete(id);
+          broadcastStatus();
+          console.log(`Client disconnected: ${id}`);
+        }
+      },
+    },
+  });
 
-        handleMessage(id, parsedMessage);
-      } catch (error) {
-        console.error('Failed to parse message:', error);
+  const httpServer = Bun.serve({
+    port: PORT,
+    fetch: app.fetch,
+  });
+
+  console.log(`Development mode:`);
+  console.log(`HTTP server running on port ${PORT}`);
+  console.log(`WebSocket server running on port ${WS_PORT}`);
+} else {
+  // Production: Single server handling both HTTP and WebSocket
+  const server = Bun.serve({
+    port: PORT,
+    fetch: (req) => {
+      // Check if it's a WebSocket request
+      if (req.headers.get('upgrade') === 'websocket') {
+        const success = server.upgrade(req);
+        if (!success) {
+          return new Response('WebSocket upgrade failed', { status: 400 });
+        }
+        return new Response();
       }
-    },
-    open(ws: ServerWebSocket) {
-      const id = crypto.randomUUID();
-      clients.set(id, { id, ws, type: 'display' });
-      console.log(`Client connected: ${id}`);
-    },
-    close(ws: ServerWebSocket) {
-      const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
-      if (id) {
-        clients.delete(id);
-        broadcastStatus();
-        console.log(`Client disconnected: ${id}`);
-      }
-    },
-  },
-});
 
-// Create HTTP server
-const httpServer = Bun.serve({
-  port: 3001,
-  fetch: app.fetch,
-});
+      // Handle regular HTTP requests
+      return app.fetch(req);
+    },
+    websocket: {
+      message(ws: ServerWebSocket, message: string) {
+        try {
+          const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
+          if (!id) return;
 
-console.log(`HTTP server running at http://localhost:${httpServer.port}`);
-console.log(`WebSocket server running at ws://localhost:${wsServer.port}`);
+          const parsedMessage = JSON.parse(message) as SceneMessage;
 
-export { httpServer, wsServer };
+          // Handle client type registration
+          if (parsedMessage.clientType) {
+            const client = clients.get(id);
+            if (client) {
+              clients.set(id, { ...client, type: parsedMessage.clientType });
+              broadcastStatus();
+              return;
+            }
+          }
+
+          handleMessage(id, parsedMessage);
+        } catch (error) {
+          console.error('Failed to parse message:', error);
+        }
+      },
+      open(ws: ServerWebSocket) {
+        const id = crypto.randomUUID();
+        clients.set(id, { id, ws, type: 'display' });
+        console.log(`Client connected: ${id}`);
+      },
+      close(ws: ServerWebSocket) {
+        const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
+        if (id) {
+          clients.delete(id);
+          broadcastStatus();
+          console.log(`Client disconnected: ${id}`);
+        }
+      },
+    },
+  });
+
+  console.log(`Production mode: Server running on port ${PORT}`);
+}
