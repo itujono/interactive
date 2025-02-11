@@ -10,23 +10,19 @@ interface Client {
   ws: ServerWebSocket;
 }
 
-// Create HTTP server for API endpoints
 const app = new Hono();
 const clients = new Map<string, Client>();
 
-// Track current scene
 let currentScene: SceneKey = 'space';
 
 const PORT = process.env.PORT || 3001;
 const isDevelopment = process.env.NODE_ENV !== 'production';
+const frontendUrl = process.env.FRONTEND_URL || 'https://interactv.vercel.app';
 
-// Update CORS to be environment-aware
 app.use(
   '/*',
   cors({
-    origin: isDevelopment
-      ? ['http://localhost:3000', 'http://localhost:3001']
-      : ['https://your-frontend-domain.vercel.app'],
+    origin: isDevelopment ? ['http://localhost:3000', 'http://localhost:3001'] : [frontendUrl],
     credentials: true,
   })
 );
@@ -45,7 +41,7 @@ function handleMessage(clientId: string, message: SceneMessage) {
       }
       broadcastToDisplays(message);
       break;
-    case 'SCENE_STATUS':
+    case 'SCENE_STATUS': {
       // Send current scene state to the requesting client
       const statusMessage: SceneMessage = {
         type: 'SCENE_STATUS',
@@ -54,6 +50,7 @@ function handleMessage(clientId: string, message: SceneMessage) {
       };
       client.ws.send(JSON.stringify(statusMessage));
       break;
+    }
     case 'CONTROL_INPUT':
       broadcastToDisplays(message);
       break;
@@ -61,7 +58,7 @@ function handleMessage(clientId: string, message: SceneMessage) {
 }
 
 function broadcastToDisplays(message: SceneMessage) {
-  for (const [_, client] of clients) {
+  for (const [, client] of clients) {
     if (client.type === 'display') {
       client.ws.send(JSON.stringify(message));
     }
@@ -69,7 +66,7 @@ function broadcastToDisplays(message: SceneMessage) {
 }
 
 function broadcastToControls(message: SceneMessage) {
-  for (const [_, client] of clients) {
+  for (const [, client] of clients) {
     if (client.type === 'control') {
       client.ws.send(JSON.stringify(message));
     }
@@ -106,7 +103,7 @@ if (isDevelopment) {
     websocket: {
       message(ws: ServerWebSocket, message: string) {
         try {
-          const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
+          const id = Array.from(clients.entries()).find(([, client]) => client.ws === ws)?.[0];
           if (!id) return;
 
           const parsedMessage = JSON.parse(message) as SceneMessage;
@@ -132,7 +129,7 @@ if (isDevelopment) {
         console.log(`Client connected: ${id}`);
       },
       close(ws: ServerWebSocket) {
-        const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
+        const id = Array.from(clients.entries()).find(([, client]) => client.ws === ws)?.[0];
         if (id) {
           clients.delete(id);
           broadcastStatus();
@@ -140,11 +137,6 @@ if (isDevelopment) {
         }
       },
     },
-  });
-
-  const httpServer = Bun.serve({
-    port: PORT,
-    fetch: app.fetch,
   });
 
   console.log(`Development mode:`);
@@ -170,7 +162,7 @@ if (isDevelopment) {
     websocket: {
       message(ws: ServerWebSocket, message: string) {
         try {
-          const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
+          const id = Array.from(clients.entries()).find(([, client]) => client.ws === ws)?.[0];
           if (!id) return;
 
           const parsedMessage = JSON.parse(message) as SceneMessage;
@@ -196,7 +188,7 @@ if (isDevelopment) {
         console.log(`Client connected: ${id}`);
       },
       close(ws: ServerWebSocket) {
-        const id = Array.from(clients.entries()).find(([_, client]) => client.ws === ws)?.[0];
+        const id = Array.from(clients.entries()).find(([, client]) => client.ws === ws)?.[0];
         if (id) {
           clients.delete(id);
           broadcastStatus();

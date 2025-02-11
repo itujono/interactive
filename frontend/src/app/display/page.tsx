@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { SceneKey, SceneMessage } from '../../types/scenes';
 
-// Lazy load scene components
 const GardenScene = dynamic(() => import('../../components/garden-scene').then((mod) => mod.GardenScene), {
   loading: () => <div className="flex min-h-screen items-center justify-center">Loading Garden Scene...</div>,
   ssr: false,
@@ -23,13 +22,26 @@ const FlowField = dynamic(() => import('../../components/flow-field').then((mod)
 export default function DisplayPage() {
   const [currentScene, setCurrentScene] = useState<SceneKey | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [isTimeout, setIsTimeout] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (status === 'loading' || !currentScene) {
+        setIsTimeout(true);
+        setStatus('error');
+      }
+    }, 5000); // 5 seconds timeout
+
+    return () => clearTimeout(timeoutId);
+  }, [status, currentScene]);
 
   const connectWebSocket = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
 
+    setIsTimeout(false); // Reset timeout state on new connection
     const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
     wsRef.current = ws;
 
@@ -138,11 +150,51 @@ export default function DisplayPage() {
   };
 
   if (status === 'loading' || !currentScene) {
-    return <div className="flex min-h-screen items-center justify-center">Loading scene status...</div>;
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <div className="font-bold text-amber-300">Loading scene status...</div>
+        <div className="text-muted-foreground text-sm">
+          {isTimeout ? (
+            <>
+              Connection is taking longer than usual.
+              <button
+                onClick={() => {
+                  setStatus('loading');
+                  setIsTimeout(false);
+                  connectWebSocket();
+                }}
+                className="ml-2 text-amber-300 hover:underline"
+              >
+                Try again
+              </button>
+            </>
+          ) : (
+            'Please wait while we connect to the server...'
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (status === 'error') {
-    return <div className="flex min-h-screen items-center justify-center">Connection Error</div>;
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <div className="font-bold text-amber-300">Connection Error</div>
+        <div className="text-muted-foreground text-sm">
+          {isTimeout ? 'Connection timed out.' : 'Failed to connect to the server.'}{' '}
+          <button
+            onClick={() => {
+              setStatus('loading');
+              setIsTimeout(false);
+              connectWebSocket();
+            }}
+            className="text-amber-300 hover:underline"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return <main className="relative min-h-screen w-full overflow-hidden bg-[#f4f1ea]">{renderScene()}</main>;
