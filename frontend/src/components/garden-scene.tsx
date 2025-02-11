@@ -55,10 +55,29 @@ interface Particle {
   type: 'petal' | 'leaf' | 'light';
 }
 
-interface UserDetailsParticle extends Particle {
+interface UserDetailsParticle {
+  pos: p5.Vector;
+  vel: p5.Vector;
+  acc: p5.Vector;
+  maxSpeed: number;
+  color: p5.Color;
+  alpha: number;
   name: string;
   country: string;
   flag: string;
+  glowPhase: number;
+  glowSpeed: number;
+  curveOffset: number;
+  curveScale: number;
+}
+
+interface Cloud {
+  pos: p5.Vector;
+  vel: p5.Vector;
+  width: number;
+  height: number;
+  alpha: number;
+  segments: number;
 }
 
 export function GardenScene() {
@@ -71,7 +90,9 @@ export function GardenScene() {
     const sketch = (p: p5) => {
       const plants: Plant[] = [];
       const particles: (Particle | UserDetailsParticle)[] = [];
+      const clouds: Cloud[] = [];
       const NUM_PARTICLES = 50;
+      const NUM_CLOUDS = 5;
       let time = 0;
       let windForce = 0;
       let windAngle = 0;
@@ -221,29 +242,46 @@ export function GardenScene() {
         };
       };
 
-      const createUserDetailsParticle = (name: string, country: string) => {
-        const pos = p.createVector(p.random(p.width), -50); // Start from top
+      const createUserDetailsParticle = (name: string, country: string): UserDetailsParticle => {
         // Find the flag from our predefined countries
-        const flag = countries.flatMap((group) => group.items).find((item) => item.value === country)?.flag || '🌍'; // Default to world emoji if country not found
+        const flag = countries.flatMap((group) => group.items).find((item) => item.value === country)?.flag || '🌍';
 
         return {
-          pos,
-          vel: p.createVector(p.random(-0.3, 0.3), p.random(0.5, 1)),
-          size: 60,
-          color: p.color(p.random(180, 240), 70, 90), // Blue-ish colors
-          alpha: 200,
-          rotationSpeed: p.random(-0.01, 0.01),
-          rotation: p.random(p.TWO_PI),
-          type: 'light' as const,
+          pos: p.createVector(p.random(p.width), p.random(p.height)),
+          vel: p.createVector(0, 0),
+          acc: p.createVector(0, 0),
+          maxSpeed: p.random(0.8, 1.2), // Gentle movement
+          color: p.color(60, 100, 100), // Warm yellow for firefly glow
+          alpha: p.random(200, 255),
           name,
           country,
           flag,
+          glowPhase: p.random(p.TWO_PI), // For pulsing effect
+          glowSpeed: p.random(0.02, 0.04), // How fast it pulses
+          curveOffset: p.random(p.TWO_PI), // For curved movement
+          curveScale: p.random(30, 50), // Size of curved movement
+        };
+      };
+
+      const createCloud = (): Cloud => {
+        return {
+          // Position clouds in the upper 20% of the viewport
+          pos: p.createVector(p.random(p.width), p.random(p.height * 0.05, p.height * 0.2)),
+          vel: p.createVector(p.random(0.2, 0.4) * (Math.random() > 0.5 ? 1 : -1), 0),
+          width: p.random(100, 200),
+          height: p.random(40, 60),
+          alpha: p.random(100, 150),
+          segments: p.floor(p.random(3, 6)),
         };
       };
 
       const updateParticle = (particle: Particle | UserDetailsParticle) => {
         particle.pos.add(particle.vel);
-        particle.rotation += particle.rotationSpeed;
+
+        // Handle rotation only for regular particles
+        if (!('name' in particle)) {
+          particle.rotation += particle.rotationSpeed;
+        }
 
         // Add wind influence
         const windInfluence = p.map(windForce, 0, 1, 0, 0.3);
@@ -280,6 +318,71 @@ export function GardenScene() {
           if (particle.pos.y > p.height) particle.pos.y = 0;
           if (particle.pos.y < 0) particle.pos.y = p.height;
         }
+      };
+
+      const updateCloud = (cloud: Cloud) => {
+        // Add wind influence (horizontal only)
+        const windInfluence = p.map(windForce, 0, 1, 0, 0.5);
+        cloud.vel.x = p.lerp(cloud.vel.x, Math.cos(windAngle) * windInfluence + (cloud.vel.x > 0 ? 0.2 : -0.2), 0.1);
+
+        // Update position
+        cloud.pos.add(cloud.vel);
+
+        // Wrap around horizontally while maintaining height
+        if (cloud.pos.x > p.width + cloud.width) {
+          cloud.pos.x = -cloud.width;
+          // Reset height within the desired range when wrapping
+          cloud.pos.y = p.random(p.height * 0.05, p.height * 0.2);
+        } else if (cloud.pos.x < -cloud.width) {
+          cloud.pos.x = p.width + cloud.width;
+          // Reset height within the desired range when wrapping
+          cloud.pos.y = p.random(p.height * 0.05, p.height * 0.2);
+        }
+
+        // Ensure clouds stay within vertical bounds
+        if (cloud.pos.y < p.height * 0.05) cloud.pos.y = p.height * 0.05;
+        if (cloud.pos.y > p.height * 0.2) cloud.pos.y = p.height * 0.2;
+      };
+
+      const drawCloud = (cloud: Cloud) => {
+        p.push();
+        p.translate(cloud.pos.x, cloud.pos.y);
+        p.noStroke();
+
+        // Draw multiple overlapping circles for cloud shape
+        const baseSize = cloud.height;
+
+        // First pass - larger base circles
+        for (let i = 0; i < cloud.segments; i++) {
+          const t = i / (cloud.segments - 1);
+          // Reduce spacing between segments by multiplying width by 0.7
+          const x = p.lerp(-cloud.width * 0.35, cloud.width * 0.35, t);
+          // Add slight vertical variation
+          const y = p.sin(t * p.PI) * (cloud.height * 0.15);
+          // Vary segment size more naturally
+          const segmentSize = baseSize * (0.8 + p.sin(t * p.PI) * 0.3);
+
+          // Base cloud color (blueish white)
+          p.fill(210, 30, 100, cloud.alpha * 0.7);
+          p.ellipse(x, y, segmentSize, segmentSize);
+
+          // Highlight
+          p.fill(210, 20, 100, cloud.alpha * 0.3);
+          p.ellipse(x, y - segmentSize * 0.2, segmentSize * 0.8, segmentSize * 0.7);
+        }
+
+        // Second pass - smaller detail circles for better connection
+        for (let i = 0; i < cloud.segments - 1; i++) {
+          const t = (i + 0.5) / (cloud.segments - 1);
+          const x = p.lerp(-cloud.width * 0.35, cloud.width * 0.35, t);
+          const y = p.sin((t + 0.5) * p.PI) * (cloud.height * 0.15);
+          const segmentSize = baseSize * 0.7;
+
+          p.fill(210, 30, 100, cloud.alpha * 0.5);
+          p.ellipse(x, y, segmentSize, segmentSize);
+        }
+
+        p.pop();
       };
 
       const growPlant = (plant: Plant) => {
@@ -417,6 +520,11 @@ export function GardenScene() {
           particles.push(createParticle());
         }
 
+        // Initialize clouds
+        for (let i = 0; i < NUM_CLOUDS; i++) {
+          clouds.push(createCloud());
+        }
+
         // Setup WebSocket connection
         const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
         wsRef.current = ws;
@@ -531,40 +639,38 @@ export function GardenScene() {
         // Decay wind force more gradually
         windForce *= 0.99;
 
+        // Update and draw clouds first (behind everything)
+        clouds.forEach((cloud) => {
+          updateCloud(cloud);
+          drawCloud(cloud);
+        });
+
         // Update and draw particles
         particles.forEach((particle) => {
           updateParticle(particle);
           p.push();
-          p.translate(particle.pos.x, particle.pos.y);
-          p.rotate(particle.rotation);
-          p.noStroke();
 
           if ('name' in particle) {
-            // Draw user details with a glowing effect
-            const glowSize = particle.size * 1.5;
-            p.fill(
-              p.hue(particle.color),
-              p.saturation(particle.color),
-              p.brightness(particle.color),
-              particle.alpha * 0.3
-            );
-            p.ellipse(0, 0, glowSize, glowSize);
+            // Add gentle curved movement
+            const curveX = Math.cos(time + particle.curveOffset) * particle.curveScale;
+            const curveY = Math.sin(time * 0.5 + particle.curveOffset) * (particle.curveScale * 0.5);
 
-            // Draw the main circle
-            p.fill(p.hue(particle.color), p.saturation(particle.color), p.brightness(particle.color), particle.alpha);
-            p.ellipse(0, 0, particle.size, particle.size);
+            p.translate(particle.pos.x + curveX, particle.pos.y + curveY);
 
             // Draw text
-            p.fill(255);
             p.noStroke();
+            p.fill(0); // Black text
             p.textSize(14);
             p.text(particle.name, 0, -8);
-            // Combine flag and country on same line
             p.textSize(10);
             const combinedText = `${particle.flag} ${particle.country}`;
             p.text(combinedText, 0, 8);
           } else {
-            // Original particle drawing code
+            // Regular particle drawing
+            p.translate(particle.pos.x, particle.pos.y);
+            p.rotate(particle.rotation);
+            p.noStroke();
+
             if (particle.type === 'light') {
               const glowSize = particle.size * 2;
               p.fill(
@@ -622,6 +728,12 @@ export function GardenScene() {
 
       p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
+        // Adjust cloud positions on resize
+        clouds.forEach((cloud) => {
+          if (cloud.pos.y > p.height * 0.3) {
+            cloud.pos.y = p.random(p.height * 0.1, p.height * 0.3);
+          }
+        });
       };
     };
 
