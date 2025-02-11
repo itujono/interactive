@@ -12,17 +12,21 @@ const SCENE_LABELS: SceneMap = {
   garden: 'Garden',
 };
 
+const TABS = [
+  { label: 'Space', value: 'space', icon: SparklesIcon },
+  { label: 'Flow Field', value: 'flow-field', icon: TvIcon },
+  { label: 'Garden', value: 'garden', icon: SunIcon },
+];
+
 export default function TabSwitcher() {
   const [scene, setScene] = useState<SceneKey | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    // Create WebSocket connection
     const websocket = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
 
     websocket.onopen = () => {
       console.log('WebSocket Connected');
-      // Request current scene status
       const message: SceneMessage = {
         type: 'SCENE_STATUS',
         clientType: 'control',
@@ -87,21 +91,13 @@ export default function TabSwitcher() {
     }
   };
 
-  // Show loading state until we receive the initial scene
-  if (scene === null) {
-    return <div className="flex items-center justify-center">Loading scene status...</div>;
-  }
-
   return (
     <Tabs
-      value={scene}
+      disabled={scene === null}
+      value={scene ?? undefined}
       onChange={handleSceneChange}
       className="flex self-center"
-      tabs={[
-        { label: 'Space', value: 'space', icon: SparklesIcon },
-        { label: 'Flow Field', value: 'flow-field', icon: TvIcon },
-        { label: 'Garden', value: 'garden', icon: SunIcon },
-      ]}
+      tabs={TABS}
     />
   );
 }
