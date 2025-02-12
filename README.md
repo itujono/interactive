@@ -6,10 +6,10 @@ A real-time interactive scene controller built with Next.js and Bun, featuring W
 
 ### Frontend
 
-- **Next.js 14** - React framework with App Router
-- **TypeScript** - Type safety and better developer experience
-- **Tailwind CSS** - Utility-first CSS framework
-- **p5.js** - Creative coding library for interactive scenes
+- **Next.js 14**
+- **TypeScript**
+- **Tailwind CSS**
+- **p5.js**
 
 ### Backend
 
@@ -111,28 +111,23 @@ Each scene follows a modular system-based architecture:
 2. Install dependencies:
 
    ```bash
-   # Install frontend dependencies
-   cd frontend
-   pnpm install
-
-   # Install backend dependencies
-   cd backend
+   # Install both backend and frontend dependencies
    bun install
    ```
 
 3. Start the development servers:
 
    ```bash
-   # Start backend server (from backend directory)
-   bun dev
+   # Start backend server (from root directory)
+   bun dev:backend
 
-   # Start frontend server (from frontend directory)
-   pnpm dev
+   # Start frontend server (from root directory)
+   bun dev:frontend
    ```
 
 4. Open your browser:
-   - Control interface: [http://localhost:3000/control](http://localhost:3000/control)
-   - Display interface: [http://localhost:3000/display](http://localhost:3000/display)
+   - Control interface: [http://localhost:3000/control](http://localhost:3000/control) (Live: [https://interactv.vercel.app/control](https://interactv.vercel.app/control))
+   - Display interface: [http://localhost:3000/display](http://localhost:3000/display) (Live: [https://interactv.vercel.app/display](https://interactv.vercel.app/display))
 
 ## Environment Setup
 
@@ -141,6 +136,7 @@ Each scene follows a modular system-based architecture:
 ```env
 PORT=3001              # HTTP server port
 WS_PORT=3002          # WebSocket server port
+FRONTEND_URL=http://localhost:3000  # Frontend URL
 ```
 
 ### Frontend
