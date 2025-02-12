@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -29,6 +29,15 @@
   --chart-4: hsl(43 74% 66%);
   --chart-5: hsl(27 87% 67%);
   --radius: 0.7rem;
+
+  --shadow-elevation-medium: 0.1px 0.4px 0.4px hsl(var(--shadow-color) / 0.43),
+    0.3px 0.9px 0.9px -1.1px hsl(var(--shadow-color) / 0.38), 0.7px 2.6px 2.7px -2.2px hsl(var(--shadow-color) / 0.32),
+    1.8px 6.7px 6.9px -3.3px hsl(var(--shadow-color) / 0.27);
+  --shadow-elevation-high: 0.1px 0.4px 0.4px hsl(var(--shadow-color) / 0.4),
+    0.4px 1.4px 1.5px -0.5px hsl(var(--shadow-color) / 0.38), 0.7px 2.7px 2.8px -1px hsl(var(--shadow-color) / 0.35),
+    1.3px 4.7px 4.9px -1.4px hsl(var(--shadow-color) / 0.33), 2.2px 8.1px 8.4px -1.9px hsl(var(--shadow-color) / 0.3),
+    3.7px 13.3px 13.8px -2.4px hsl(var(--shadow-color) / 0.28),
+    5.8px 21px 21.7px -2.9px hsl(var(--shadow-color) / 0.25), 8.7px 31.6px 32.7px -3.3px hsl(var(--shadow-color) / 0.22);
 }
 
 @media (prefers-color-scheme: dark) {
