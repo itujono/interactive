@@ -1,6 +1,6 @@
 # Interactive Scene Controller
 
-A real-time interactive scene controller built with Next.js and Bun, featuring WebSocket communication between control and display interfaces.
+A real-time interactive scene controller built with Next.js and Bun, featuring WebSocket communication between control and display interfaces. Providing your name and your country input will display it on the screen real-time.
 
 ## Tech Stack
 
@@ -49,6 +49,8 @@ A real-time interactive scene controller built with Next.js and Bun, featuring W
 
 #### Space Scene
 
+![Space Scene](./public/space-scene.png)
+
 - Dynamic star field with parallax effect
 - Procedurally generated planets with rings
 - Camera panning and user interaction
@@ -56,12 +58,16 @@ A real-time interactive scene controller built with Next.js and Bun, featuring W
 
 #### Flow Field Scene
 
+![Flow Field Scene](./public/flow-fluid-scene.png)
+
 - Dynamic vector field visualization
 - Interactive particle system
 - Mouse force field interaction
 - User details integration
 
 #### Garden Scene
+
+![Garden Scene](./public/garden-scene.png)
 
 - Interactive plant growth system
 - Dynamic wind effects
