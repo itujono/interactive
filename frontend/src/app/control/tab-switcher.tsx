@@ -1,6 +1,6 @@
 'use client';
 
-import { SparklesIcon, TvIcon, SunIcon } from 'lucide-react';
+import { SparklesIcon, TvIcon, SunIcon, Share2Icon, ForwardIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Tabs } from '../../components/tabs';
 import type { SceneKey, SceneMessage, SceneMap } from '../../types/scenes';
@@ -80,7 +80,18 @@ export default function TabSwitcher() {
   const handleSceneChange = (value: string) => {
     const newScene = value as SceneKey;
     setScene(newScene);
-    toast.success(`Scene changed to ${SCENE_LABELS[newScene]}`);
+    toast(`Scene changed to ${SCENE_LABELS[newScene]}`, {
+      action: {
+        label: (
+          <span className="flex items-center gap-1 text-xs">
+            Open Display <ForwardIcon className="size-4" />
+          </span>
+        ),
+        onClick: () => {
+          window.open(process.env.NEXT_PUBLIC_DISPLAY_URL, 'display-window');
+        },
+      },
+    });
 
     if (ws?.readyState === WebSocket.OPEN) {
       const message: SceneMessage = {

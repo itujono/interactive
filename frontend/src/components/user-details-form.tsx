@@ -7,6 +7,7 @@ import { Input } from './input';
 import SelectWithFlag from './select-with-flag';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+import { ForwardIcon } from 'lucide-react';
 
 export function UserDetailsForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [values, setValues] = useState({ name: '', country: '' });
@@ -14,13 +15,11 @@ export function UserDetailsForm({ className, ...props }: React.ComponentPropsWit
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    // Create WebSocket connection
     const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_BACKEND_URL || 'ws://localhost:3002');
     wsRef.current = ws;
 
     ws.onopen = () => {
       console.log('Control WebSocket Connected');
-      // Register as control client
       const registerMessage = {
         type: 'SCENE_STATUS',
         clientType: 'control',
@@ -46,7 +45,6 @@ export function UserDetailsForm({ className, ...props }: React.ComponentPropsWit
 
     setIsSubmitting(true);
 
-    // Send user details via WebSocket
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       const message = {
         type: 'CONTROL_INPUT',
@@ -56,15 +54,17 @@ export function UserDetailsForm({ className, ...props }: React.ComponentPropsWit
       };
       wsRef.current.send(JSON.stringify(message));
 
-      // Reset form
       setValues({ name: '', country: '' });
-      // toast.success(`Now open ${process.env.NEXT_PUBLIC_DISPLAY_URL} to see your name floating in the scene`);
       toast('Your details sent!', {
         description: `Now open the Display tab to see your name floating in the scene`,
         action: {
-          label: 'Open Display',
+          label: (
+            <span className="flex items-center gap-1 text-xs">
+              Open Display <ForwardIcon className="size-4" />
+            </span>
+          ),
           onClick: () => {
-            window.open(process.env.NEXT_PUBLIC_DISPLAY_URL, '_blank');
+            window.open(process.env.NEXT_PUBLIC_DISPLAY_URL, 'display-window');
           },
         },
       });
