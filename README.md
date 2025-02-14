@@ -13,9 +13,9 @@ A real-time interactive scene controller built with Next.js and Bun, featuring W
 
 ### Backend
 
-- **Bun** - JavaScript runtime and bundler
-- **Hono** - Lightweight web framework
-- **WebSocket** - Real-time bidirectional communication
+- **Bun**
+- **Hono**
+- **WebSocket**
 
 ## Project Structure
 
@@ -86,7 +86,7 @@ Each scene follows a modular system-based architecture:
 
 ### Real-time Scene Control
 
-- Multiple interactive scenes (Space, Flow Field, Garden)
+- Multiple interactive scenes (Space, Flow Field, Garden, and more to come)
 - Real-time synchronization between control and display interfaces
 - Lazy-loaded scene components for optimal performance
 - Toast notifications for scene changes and sync events
@@ -97,13 +97,6 @@ Each scene follows a modular system-based architecture:
 - Client type registration (control/display)
 - Scene state persistence across page refreshes
 - Connection status handling and error recovery
-
-### UI Components
-
-- Responsive tab-based scene switcher
-- Loading states with layout shift prevention
-- Smooth transitions between scenes
-- Country selection with flag icons
 
 ## Getting Started
 
@@ -149,7 +142,3 @@ NEXT_PUBLIC_DISPLAY_URL=http://localhost:3000/display  # Display page URL
 ## Contributing
 
 Currently not accepting contributions.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
